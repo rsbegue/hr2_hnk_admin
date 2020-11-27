@@ -1,7 +1,8 @@
 import React from 'react';
 import Head from 'next/head';
 
-const SEO: React.FC<SEOProps> = ({ description, keywords, title }) => (
+// description, keywords, 
+const SEO: React.FC<SEOProps> = ({ title }) => (
   <Head>
     <title>{title} :: Heineken Zero 0.0</title>
     {/* <meta name="description" content={description} />

@@ -5,44 +5,46 @@ import Col from '@paljs/ui/Col';
 import { List, ListItem } from '@paljs/ui/List';
 import { Card } from '@paljs/ui/Card';
 import User from '@paljs/ui/User';
-import styled, { css } from 'styled-components';
-import { breakpointUp } from '@paljs/ui/breakpoints';
-import { Button, ButtonLink } from '@paljs/ui/Button';
+// import styled, { css } from 'styled-components';
+// import { breakpointUp } from '@paljs/ui/breakpoints';
+import { Button } from '@paljs/ui/Button';
 
-import qs from 'qs';
+// import qs from 'qs';
+
+const qs = require('qs');
 
 
-interface BoxProps {
-  nested?: boolean;
-  container?: boolean;
-  row?: boolean;
-  large?: boolean;
-}
+// interface BoxProps {
+//   nested?: boolean;
+//   container?: boolean;
+//   row?: boolean;
+//   large?: boolean;
+// }
 
-const Box = styled.div<BoxProps>`
-  ${({ theme, nested, container, row, large }) => css`
-    position: relative;
-    box-sizing: border-box;
-    min-height: 1rem;
-    overflow: hidden;
-    text-align: center;
-    background: ${theme.colorBasic600};
-    padding: 0.75rem 0.25rem;
-    border-radius: 0.25rem;
-    ${large && 'height: 8rem;'};
-    ${row && 'margin-bottom: 1rem  !important;'};
-    ${container && 'padding: .5em;'};
-    ${nested && `background-color: ${theme.colorBasic200};`};
-    ${breakpointUp('md')`
-      padding: 1rem;
-    `}
-  `}
-`;
+// const Box = styled.div<BoxProps>`
+//   ${({ theme, nested, container, row, large }) => css`
+//     position: relative;
+//     box-sizing: border-box;
+//     min-height: 1rem;
+//     overflow: hidden;
+//     text-align: center;
+//     background: ${theme.colorBasic600};
+//     padding: 0.75rem 0.25rem;
+//     border-radius: 0.25rem;
+//     ${large && 'height: 8rem;'};
+//     ${row && 'margin-bottom: 1rem  !important;'};
+//     ${container && 'padding: .5em;'};
+//     ${nested && `background-color: ${theme.colorBasic200};`};
+//     ${breakpointUp('md')`
+//       padding: 1rem;
+//     `}
+//   `}
+// `;
 
 const API_URL = "https://heineken.eracell.com.br";
 const STRAPI_API_URL = "https://strapi.heineken.eracell.com.br";
 
-const initialUsers = [];
+const initialUsers: { name: string, title: string, id: number, status: number, room: string }[] = [];
 
 const Home = () => {
   const [users, setUsers] = useState(initialUsers);
@@ -72,7 +74,7 @@ const Home = () => {
 
       for (const call in calls) {
         if (Object.prototype.hasOwnProperty.call(calls, call)) {
-          const element = calls[call];
+          // const element = calls[call];
           salas.push(call);
         }
       }
@@ -96,7 +98,7 @@ const Home = () => {
 
         console.log(data);
 
-        data.map((item) => {
+        data.map((item: any) => {
 
           let checkUser = users.filter(user => (user.id == item.id));
           if(checkUser.length == 0){
@@ -132,12 +134,12 @@ const Home = () => {
     return user.status < 2;
   });
 
-  function windowsOpen(id, room, status){
+  function windowsOpen(id: number, room: string, status: number){
     changeStatus(id, status);
     window.open('https://heineken.eracell.com.br/view?room='+room, 'sharer', 'toolbar=0,status=0,width=1280,height=1024');
   }
 
-  function changeStatus(id, status){
+  function changeStatus(id: number, status: number){
     const newUser = users.map((user) => {
       if (user.id === id) {
         const updatedUser = {

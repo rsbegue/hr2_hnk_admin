@@ -2,7 +2,7 @@ import { Button } from '@paljs/ui/Button';
 import { InputGroup } from '@paljs/ui/Input';
 import React, {useRef, useState} from 'react';
 import { useRouter } from 'next/router';
-import Auth, { Group } from 'components/Auth';
+import Auth from 'components/Auth';
 import Layout from 'Layouts';
 
 import Alert from '@paljs/ui/Alert';
@@ -26,7 +26,7 @@ export default function Login() {
   const router = useRouter();
   const [isAuth, setAuth] = useState(false);
 
-  async function handleSubmit(data, {reset}){
+  async function handleSubmit(data: any){
     formRef.current.setErrors({});
 
     try {
@@ -95,7 +95,7 @@ export default function Login() {
         if (err instanceof Yup.ValidationError){
             const errorMessages = {};
 
-            err.inner.forEach(error => {
+            err.inner.forEach((error: any) => {
                 errorMessages[error.path] = error.message;
             });
 
