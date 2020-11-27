@@ -5,7 +5,7 @@ import styled, { DefaultTheme } from 'styled-components';
 import Select from '@paljs/ui/Select';
 import { LayoutHeader } from '@paljs/ui/Layout';
 import { EvaIcon } from '@paljs/ui/Icon';
-import { Button } from '@paljs/ui/Button';
+// import { Button } from '@paljs/ui/Button';
 import { Actions } from '@paljs/ui/Actions';
 import ContextMenu from '@paljs/ui/ContextMenu';
 import User from '@paljs/ui/User';
