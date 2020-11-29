@@ -8,11 +8,11 @@ import User from '@paljs/ui/User';
 // import styled, { css } from 'styled-components';
 // import { breakpointUp } from '@paljs/ui/breakpoints';
 import { Button } from '@paljs/ui/Button';
+// import { Toastr, ToastrRef, ToastrProps } from '@paljs/ui/Toastr';
 
 // import qs from 'qs';
 
 const qs = require('qs');
-
 
 // interface BoxProps {
 //   nested?: boolean;
@@ -41,35 +41,43 @@ const qs = require('qs');
 //   `}
 // `;
 
-const API_URL = "https://heineken.eracell.com.br";
-const STRAPI_API_URL = "https://strapi.heineken.eracell.com.br";
+const initialUsers: { name: string; title: string; id: number; status: number; room: string }[] = [];
 
-const initialUsers: { name: string, title: string, id: number, status: number, room: string }[] = [];
+const ua: number = 0;
 
 const Home = () => {
   const [users, setUsers] = useState(initialUsers);
   // const [reload, setReload] = useState(true);
   const [calls, setCall] = useState([]);
+  // const toastrRef = useRef<ToastrRef>(null);
+
+  // const toast = <ToastrProps>({
+  //   position: 'topEnd',
+  //   status: 'Danger',
+  //   duration: 2000,
+  //   hasIcon: true,
+  //   destroyByClick: true,
+  //   preventDuplicates: false,
+  // });
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      ua = JSON.parse(localStorage.getItem('user')).id;
+    }
+
     getAtendimentos();
 
     const interval = setInterval(() => {
       getAtendimentos();
     }, 1000 * 5);
 
-    return ()=>clearInterval(interval);
+    return () => clearInterval(interval);
   }, []);
 
-
   useEffect(() => {
-
-    if(calls.length == 0){
+    if (calls.length == 0) {
       setUsers([]);
-    }else{
-
-      
-
+    } else {
       let salas = [];
 
       for (const call in calls) {
@@ -80,91 +88,94 @@ const Home = () => {
       }
 
       console.log('salas', salas);
-
-      const query = qs.stringify({
-        _where: {
-          sala: salas
-        }
-      });
-
-      fetch(`${STRAPI_API_URL}/participantes?${query}`, {
-          method: 'GET',
-          headers: {
-              'Content-Type': 'application/json',
-          }
-      })
-      .then(response => response.json())
-      .then(data => {
-
-        console.log(data);
-
-        data.map((item: any) => {
-
-          let checkUser = users.filter(user => (user.id == item.id));
-          if(checkUser.length == 0){
-            users.push({ 
-              name: item.nome, 
-              title: 'M:'+item.machine.idMachine+' - '+ item.email +' | ' + item.telefone,
-              id: item.id,
-              status: 0,
-              room: item.sala
-            });
-          }
-
+      if (salas.length > 0) {
+        const query = qs.stringify({
+          _where: {
+            sala: salas,
+          },
         });
 
-        
-      });
-    }
+        fetch(`${process.env.STRAPI_API_URL}/participantes?${query}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log('FETCH PARTICIPANTES', data);
 
+            data.map((item: any) => {
+              let checkUser = users.filter((user) => user.id == item.id);
+              if (checkUser.length == 0) {
+                users.push({
+                  name: item.nome,
+                  title: 'M:' + item.machine.idMachine + ' - ' + item.email + ' | ' + item.telefone,
+                  id: item.id,
+                  status: 0,
+                  room: item.sala,
+                });
+                // showToastr(item.nome, "Ligação recebida");
+                alert('LIGAÇÃO RECEBIDA');
+              }
+            });
+          });
+      }
+    }
   }, [calls]);
 
+  // const showToastr = (message: string, title: string) => {
+  //   toastrRef.current?.add(message, title);
+  // };
+
   const getAtendimentos = async () => {
-    await fetch(`${API_URL}/atendimentos`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
+    await fetch(`${process.env.API_URL}/atendimentos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
-    .then(response => response.json())
-    .then(data => setCall(data));
+      .then((response) => response.json())
+      .then((data) => setCall(data));
   };
 
   let userList = users.filter((user) => {
     return user.status < 2;
   });
 
-  function windowsOpen(id: number, room: string, status: number){
+  function windowsOpen(id: number, room: string, status: number) {
     changeStatus(id, status);
-    window.open('https://heineken.eracell.com.br/view?room='+room, 'sharer', 'toolbar=0,status=0,width=1280,height=1024');
+    window.open(
+      `${process.env.API_URL}/view?room=${room}&ua=${ua}`,
+      'sharer',
+      'toolbar=0,status=0,width=1280,height=1024',
+    );
   }
 
-  function changeStatus(id: number, status: number){
+  function changeStatus(id: number, status: number) {
     const newUser = users.map((user) => {
       if (user.id === id) {
         const updatedUser = {
           ...user,
           status: status,
         };
- 
+
         return updatedUser;
       }
- 
+
       return user;
     });
- 
-    setUsers(newUser);
 
+    setUsers(newUser);
   }
-  
+
   return (
     <Layout title="Atendimento">
       <Row>
         <Col breakPoint={{ xs: 12, sm: 12, md: 12, lg: 12 }}>
           <Card size="Giant">
             <header>Atendimentos</header>
-            {
-              userList.length > 0 &&
+            {userList.length > 0 && (
               <List>
                 {userList.map((user, index) => (
                   <ListItem key={index}>
@@ -172,27 +183,28 @@ const Home = () => {
                       <Col breakPoint={{ lg: 4 }}>
                         <User title={user.title} name={user.name} />
                       </Col>
-                    
-                      <Col breakPoint={{ lg: 2 }} offset={{ md: 6}} >
-                        {
-                          user.status == 0 &&
-                          <Button appearance={"outline"} status={"Warning"} onClick={() => windowsOpen(user.id, user.room, 1)}>
+
+                      <Col breakPoint={{ lg: 2 }} offset={{ md: 6 }}>
+                        {user.status == 0 && (
+                          <Button
+                            appearance={'outline'}
+                            status={'Warning'}
+                            onClick={() => windowsOpen(user.id, user.room, 1)}
+                          >
                             ATENDER
                           </Button>
-                        }
-                        {
-                          user.status == 1 &&
-                          <Button appearance={"outline"} status={"Danger"} onClick={() => changeStatus(user.id, 2)}>
+                        )}
+                        {user.status == 1 && (
+                          <Button appearance={'outline'} status={'Danger'} onClick={() => changeStatus(user.id, 2)}>
                             ENCERRAR
                           </Button>
-                        }
+                        )}
                       </Col>
                     </Row>
                   </ListItem>
                 ))}
               </List>
-            }
-            
+            )}
           </Card>
         </Col>
       </Row>
