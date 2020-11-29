@@ -47,7 +47,7 @@ const Home = () => {
   const [users, setUsers] = useState(initialUsers);
   // const [reload, setReload] = useState(true);
   const [calls, setCall] = useState([]);
-  const ua = 0;
+
   // const toastrRef = useRef<ToastrRef>(null);
 
   // const toast = <ToastrProps>({
@@ -60,10 +60,6 @@ const Home = () => {
   // });
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      ua = JSON.parse(localStorage.getItem('user')).id;
-    }
-
     getAtendimentos();
 
     const interval = setInterval(() => {
@@ -144,6 +140,7 @@ const Home = () => {
 
   function windowsOpen(id: number, room: string, status: number) {
     changeStatus(id, status);
+    let ua = JSON.parse(localStorage.getItem('user') || '{}').id;
     window.open(
       `${process.env.API_URL}/view?room=${room}&ua=${ua}`,
       'sharer',
