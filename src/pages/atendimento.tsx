@@ -43,12 +43,11 @@ const qs = require('qs');
 
 const initialUsers: { name: string; title: string; id: number; status: number; room: string }[] = [];
 
-const ua: number = 0;
-
 const Home = () => {
   const [users, setUsers] = useState(initialUsers);
   // const [reload, setReload] = useState(true);
   const [calls, setCall] = useState([]);
+  const ua = 0;
   // const toastrRef = useRef<ToastrRef>(null);
 
   // const toast = <ToastrProps>({
