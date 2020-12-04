@@ -18,12 +18,19 @@ const socket = io('https://heineken.eracell.com.br/', {
   transports: ['websocket'],
 });
 
-const ListParent = ({ list }) => {
+const ListParent = ({ list, onCall }) => {
   function windowsOpen(id: number, room: string, status: number) {
-    // changeStatus(id, status);
-    let ua = JSON.parse(localStorage.getItem('user') || '{}').id;
+    let ua = JSON.parse(localStorage.getItem('user') || '{}');
+
+    onCall({
+      id: id,
+      room: room,
+      status: status,
+      atendimento: ua,
+    });
+
     window.open(
-      `${process.env.API_URL}/view?room=${room}&ua=${ua}`,
+      `${process.env.API_URL}/view?room=${room}&ua=${ua.id}`,
       'sharer',
       'toolbar=0,status=0,width=1280,height=1024',
     );
@@ -45,8 +52,17 @@ const ListParent = ({ list }) => {
                 </Button>
               )}
               {item.status == 1 && (
-                <Button appearance={'outline'} status={'Danger'} onClick={() => changeStatus(item.id, 2)}>
+                <Button
+                  appearance={'outline'}
+                  status={'Danger'}
+                  // onClick={() => onCall({ id: item.id, status: 2,  })}
+                >
                   ENCERRAR
+                </Button>
+              )}
+              {item.status == 3 && (
+                <Button appearance={'outline'} status={'Info'} disabled={true}>
+                  EM ANDAMENTO
                 </Button>
               )}
             </Col>
@@ -59,6 +75,7 @@ const ListParent = ({ list }) => {
 
 const listReducer = (state, action) => {
   console.log(action);
+
   switch (action.type) {
     case 'ADD_ITEM':
       return {
@@ -69,8 +86,41 @@ const listReducer = (state, action) => {
           id: action.data.id,
           status: 0,
           room: action.data.sala,
+          atendimento: 0,
         }),
       };
+
+    case 'UPDATE_ITEM':
+      let ua = JSON.parse(localStorage.getItem('user') || '{}');
+      let status = 0;
+      if (action.payload.status == 1 && ua.id == action.payload.atendimento.id) {
+        status = 1;
+      } else {
+        status = 3;
+      }
+
+      const newList = state.list.map((item) => {
+        if (item.id === action.payload.id) {
+          const updatedItem = {
+            ...item,
+            atendimento: action.payload.atendimento.id,
+            status: status,
+          };
+
+          return updatedItem;
+        }
+
+        return item;
+      });
+
+      return { ...state, list: newList };
+
+    case 'REMOVE_ITEM':
+      return {
+        ...state,
+        list: state.list.filter((item) => item.room !== action.payload.room),
+      };
+
     default:
       throw new Error();
   }
@@ -90,9 +140,9 @@ const Home = () => {
 
     socketRef.current.on('ligacaoRecebida', handleLigacaoRecebida);
 
-    // socketRef.current.on('ligacaoEncerrada', handleLigacaoEncerrada);
+    socketRef.current.on('ligacaoEncerrada', handleLigacaoEncerrada);
 
-    // socketRef.current.on('ligacaoAtendida', handleLigacaoAtendida);
+    socketRef.current.on('ligacaoAtendida', handleLigacaoAtendida);
   }, []);
 
   async function handleLigacaoRecebida(payload: { room: any }) {
@@ -110,30 +160,25 @@ const Home = () => {
 
       if (disponivel) {
         alert('LIGAÇÃO RECEBIDA: ' + data.nome);
-        setDisponivel(false);
       }
     }
   }
 
-  // function handleLigacaoEncerrada(payload: any){
-  //   dispatchList({ type: 'REMOVE_ITEM', payload });
-  // }
+  function handleLigacaoEncerrada(payload: any) {
+    dispatchListData({ type: 'REMOVE_ITEM', payload });
+    setDisponivel(true);
+  }
 
-  function changeStatus(id: number, status: number) {
-    const newUser = users.map((user) => {
-      if (user.id === id) {
-        const updatedUser = {
-          ...user,
-          status: status,
-        };
+  function handleOnCall(payload) {
+    dispatchListData({ type: 'UPDATE_ITEM', payload });
 
-        return updatedUser;
-      }
+    setDisponivel(false);
+    socketRef.current.emit('ligacaoAtendida', payload);
+  }
 
-      return user;
-    });
-
-    setUsers(newUser);
+  function handleLigacaoAtendida(payload) {
+    console.log('LIGAÇÃO ATENDIDA', payload);
+    dispatchListData({ type: 'UPDATE_ITEM', payload });
   }
 
   return (
@@ -141,13 +186,12 @@ const Home = () => {
       <Row>
         <Col breakPoint={{ xs: 12, sm: 12, md: 12, lg: 12 }}>
           <Card size="Giant">
-            <header>Atendimentos </header>
-            {/* ({list.length}) */}
-            {/* {
-              list.length == 0 &&
-              <h6 style={{textAlign:'center'}}>Nenhum atendimento em andamento</h6>
-            } */}
-            <ListParent list={listData.list} />
+            <header>
+              Atendimentos ({listData.list.length}) - {disponivel == true && 'ESTOU DISPONÍVEL'}{' '}
+              {disponivel == false && 'ESTOU EM ATENDIMENTO'}
+            </header>
+            {listData.list.length == 0 && <h6 style={{ textAlign: 'center' }}>Nenhum atendimento em andamento</h6>}
+            <ListParent list={listData.list} onCall={handleOnCall} />
           </Card>
         </Col>
       </Row>
