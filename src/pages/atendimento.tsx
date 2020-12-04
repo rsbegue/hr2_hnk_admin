@@ -1,145 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 import Layout from 'Layouts';
 import Row from '@paljs/ui/Row';
 import Col from '@paljs/ui/Col';
 import { List, ListItem } from '@paljs/ui/List';
 import { Card } from '@paljs/ui/Card';
 import User from '@paljs/ui/User';
-// import styled, { css } from 'styled-components';
-// import { breakpointUp } from '@paljs/ui/breakpoints';
-import { Button } from '@paljs/ui/Button';
-// import { Toastr, ToastrRef, ToastrProps } from '@paljs/ui/Toastr';
 
-// import qs from 'qs';
+import { Button } from '@paljs/ui/Button';
+import io from 'socket.io-client';
+import axios from 'axios';
 
 const qs = require('qs');
 
-// interface BoxProps {
-//   nested?: boolean;
-//   container?: boolean;
-//   row?: boolean;
-//   large?: boolean;
-// }
-
-// const Box = styled.div<BoxProps>`
-//   ${({ theme, nested, container, row, large }) => css`
-//     position: relative;
-//     box-sizing: border-box;
-//     min-height: 1rem;
-//     overflow: hidden;
-//     text-align: center;
-//     background: ${theme.colorBasic600};
-//     padding: 0.75rem 0.25rem;
-//     border-radius: 0.25rem;
-//     ${large && 'height: 8rem;'};
-//     ${row && 'margin-bottom: 1rem  !important;'};
-//     ${container && 'padding: .5em;'};
-//     ${nested && `background-color: ${theme.colorBasic200};`};
-//     ${breakpointUp('md')`
-//       padding: 1rem;
-//     `}
-//   `}
-// `;
-
 const initialUsers: { name: string; title: string; id: number; status: number; room: string }[] = [];
 
-const Home = () => {
-  const [users, setUsers] = useState(initialUsers);
-  // const [reload, setReload] = useState(true);
-  const [calls, setCall] = useState([]);
+const socket = io('https://heineken.eracell.com.br/', {
+  transports: ['websocket'],
+});
 
-  // const toastrRef = useRef<ToastrRef>(null);
-
-  // const toast = <ToastrProps>({
-  //   position: 'topEnd',
-  //   status: 'Danger',
-  //   duration: 2000,
-  //   hasIcon: true,
-  //   destroyByClick: true,
-  //   preventDuplicates: false,
-  // });
-
-  useEffect(() => {
-    getAtendimentos();
-
-    const interval = setInterval(() => {
-      getAtendimentos();
-    }, 1000 * 5);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (calls.length == 0) {
-      setUsers([]);
-    } else {
-      let salas = [];
-
-      for (const call in calls) {
-        if (Object.prototype.hasOwnProperty.call(calls, call)) {
-          // const element = calls[call];
-          salas.push(call);
-        }
-      }
-
-      console.log('salas', salas);
-      if (salas.length > 0) {
-        const query = qs.stringify({
-          _where: {
-            sala: salas,
-          },
-        });
-
-        fetch(`${process.env.STRAPI_API_URL}/participantes?${query}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            console.log('FETCH PARTICIPANTES', data);
-
-            data.map((item: any) => {
-              let checkUser = users.filter((user) => user.id == item.id);
-              if (checkUser.length == 0) {
-                users.push({
-                  name: item.nome,
-                  title: 'M:' + item.machine.idMachine + ' - ' + item.email + ' | ' + item.telefone,
-                  id: item.id,
-                  status: 0,
-                  room: item.sala,
-                });
-                // showToastr(item.nome, "Ligação recebida");
-                alert('LIGAÇÃO RECEBIDA');
-              }
-            });
-          });
-      }
-    }
-  }, [calls]);
-
-  // const showToastr = (message: string, title: string) => {
-  //   toastrRef.current?.add(message, title);
-  // };
-
-  const getAtendimentos = async () => {
-    await fetch(`${process.env.API_URL}/atendimentos`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => setCall(data));
-  };
-
-  let userList = users.filter((user) => {
-    return user.status < 2;
-  });
-
+const ListParent = ({ list }) => {
   function windowsOpen(id: number, room: string, status: number) {
-    changeStatus(id, status);
+    // changeStatus(id, status);
     let ua = JSON.parse(localStorage.getItem('user') || '{}').id;
     window.open(
       `${process.env.API_URL}/view?room=${room}&ua=${ua}`,
@@ -147,6 +28,96 @@ const Home = () => {
       'toolbar=0,status=0,width=1280,height=1024',
     );
   }
+
+  return (
+    <List>
+      {list.map((item) => (
+        <ListItem key={item.id}>
+          <Row style={{ width: '100%' }}>
+            <Col breakPoint={{ lg: 4 }}>
+              <User title={item.title} name={item.name} />
+            </Col>
+
+            <Col breakPoint={{ lg: 2 }} offset={{ md: 6 }}>
+              {item.status == 0 && (
+                <Button appearance={'outline'} status={'Warning'} onClick={() => windowsOpen(item.id, item.room, 1)}>
+                  ATENDER
+                </Button>
+              )}
+              {item.status == 1 && (
+                <Button appearance={'outline'} status={'Danger'} onClick={() => changeStatus(item.id, 2)}>
+                  ENCERRAR
+                </Button>
+              )}
+            </Col>
+          </Row>
+        </ListItem>
+      ))}
+    </List>
+  );
+};
+
+const listReducer = (state, action) => {
+  console.log(action);
+  switch (action.type) {
+    case 'ADD_ITEM':
+      return {
+        ...state,
+        list: state.list.concat({
+          name: action.data.nome,
+          title: 'M:' + action.data.machine.idMachine + ' - ' + action.data.email + ' | ' + action.data.telefone,
+          id: action.data.id,
+          status: 0,
+          room: action.data.sala,
+        }),
+      };
+    default:
+      throw new Error();
+  }
+};
+
+const Home = () => {
+  const [disponivel, setDisponivel] = useState(true);
+  const [listData, dispatchListData] = React.useReducer(listReducer, {
+    list: initialUsers,
+    isShowList: true,
+  });
+
+  const socketRef = useRef();
+
+  useEffect(() => {
+    socketRef.current = io.connect('https://heineken.eracell.com.br/');
+
+    socketRef.current.on('ligacaoRecebida', handleLigacaoRecebida);
+
+    // socketRef.current.on('ligacaoEncerrada', handleLigacaoEncerrada);
+
+    // socketRef.current.on('ligacaoAtendida', handleLigacaoAtendida);
+  }, []);
+
+  async function handleLigacaoRecebida(payload: { room: any }) {
+    const query = qs.stringify({
+      _where: {
+        sala: payload.room,
+      },
+    });
+
+    let result = await axios.get(`${process.env.STRAPI_API_URL}/participantes?${query}`);
+
+    if (result.data.length > 0) {
+      let data = result.data[0];
+      dispatchListData({ type: 'ADD_ITEM', data });
+
+      if (disponivel) {
+        alert('LIGAÇÃO RECEBIDA: ' + data.nome);
+        setDisponivel(false);
+      }
+    }
+  }
+
+  // function handleLigacaoEncerrada(payload: any){
+  //   dispatchList({ type: 'REMOVE_ITEM', payload });
+  // }
 
   function changeStatus(id: number, status: number) {
     const newUser = users.map((user) => {
@@ -170,37 +141,13 @@ const Home = () => {
       <Row>
         <Col breakPoint={{ xs: 12, sm: 12, md: 12, lg: 12 }}>
           <Card size="Giant">
-            <header>Atendimentos</header>
-            {userList.length > 0 && (
-              <List>
-                {userList.map((user, index) => (
-                  <ListItem key={index}>
-                    <Row style={{ width: '100%' }}>
-                      <Col breakPoint={{ lg: 4 }}>
-                        <User title={user.title} name={user.name} />
-                      </Col>
-
-                      <Col breakPoint={{ lg: 2 }} offset={{ md: 6 }}>
-                        {user.status == 0 && (
-                          <Button
-                            appearance={'outline'}
-                            status={'Warning'}
-                            onClick={() => windowsOpen(user.id, user.room, 1)}
-                          >
-                            ATENDER
-                          </Button>
-                        )}
-                        {user.status == 1 && (
-                          <Button appearance={'outline'} status={'Danger'} onClick={() => changeStatus(user.id, 2)}>
-                            ENCERRAR
-                          </Button>
-                        )}
-                      </Col>
-                    </Row>
-                  </ListItem>
-                ))}
-              </List>
-            )}
+            <header>Atendimentos </header>
+            {/* ({list.length}) */}
+            {/* {
+              list.length == 0 &&
+              <h6 style={{textAlign:'center'}}>Nenhum atendimento em andamento</h6>
+            } */}
+            <ListParent list={listData.list} />
           </Card>
         </Col>
       </Row>
