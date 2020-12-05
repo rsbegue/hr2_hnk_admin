@@ -18,6 +18,8 @@ const socket = io('https://heineken.eracell.com.br/', {
   transports: ['websocket'],
 });
 
+let openModal = false;
+
 const ListParent = ({ list, onCall }) => {
   function windowsOpen(id: number, room: string, status: number) {
     let ua = JSON.parse(localStorage.getItem('user') || '{}');
@@ -29,11 +31,15 @@ const ListParent = ({ list, onCall }) => {
       atendimento: ua,
     });
 
-    window.open(
-      `${process.env.API_URL}/view?room=${room}&ua=${ua.id}`,
-      'sharer',
-      'toolbar=0,status=0,width=1280,height=1024',
-    );
+    setTimeout(() => {
+      if (openModal) {
+        window.open(
+          `${process.env.API_URL}/view?room=${room}&ua=${ua.id}`,
+          'sharer',
+          'toolbar=0,status=0,width=1280,height=1024',
+        );
+      }
+    }, 1000);
   }
 
   return (
@@ -74,8 +80,6 @@ const ListParent = ({ list, onCall }) => {
 };
 
 const listReducer = (state, action) => {
-  console.log(action);
-
   switch (action.type) {
     case 'ADD_ITEM':
       return {
@@ -169,15 +173,25 @@ const Home = () => {
     setDisponivel(true);
   }
 
-  function handleOnCall(payload) {
-    dispatchListData({ type: 'UPDATE_ITEM', payload });
+  async function handleOnCall(payload) {
+    let calls = await axios.get('https://heineken.eracell.com.br/atendimentos');
 
-    setDisponivel(false);
-    socketRef.current.emit('ligacaoAtendida', payload);
+    if (calls.data[payload.room].length < 2) {
+      openModal = true;
+
+      setDisponivel(false);
+
+      dispatchListData({ type: 'UPDATE_ITEM', payload });
+
+      socketRef.current.emit('ligacaoAtendida', payload);
+    } else {
+      openModal = false;
+      alert('Ops, atendimento já esta sendo realizado por outro atendimento.');
+    }
   }
 
   function handleLigacaoAtendida(payload) {
-    console.log('LIGAÇÃO ATENDIDA', payload);
+    // console.log('LIGAÇÃO ATENDIDA', payload);
     dispatchListData({ type: 'UPDATE_ITEM', payload });
   }
 

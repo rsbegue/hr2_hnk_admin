@@ -64,10 +64,8 @@ export default function Login() {
           return;
         });
 
-      console.log(loginResult.jwt);
-
-      if (loginResult.jwt != undefined) {
-      }
+      // if (loginResult.jwt != undefined) {
+      // }
 
       // if(data.email != initialData.email || data.senha != initialData.senha){
       //   setAuth(true);
